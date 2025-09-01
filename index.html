@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="description" content="Pink Floyd tribute band — The Dark Side of the Soo — Sault Ste. Marie, Ontario." />
+  <meta name="author" content="The Dark Side of the Soo" />
+
+  <title>The Dark Side of the Soo</title>
+
+  <!-- Fonts & CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;400;700&display=swap" rel="stylesheet">
+  <link href="css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/bootstrap-icons.css" rel="stylesheet">
+  <link href="css/templatemo-festava-live.css" rel="stylesheet">
+
+  <!-- Mobile fixes / overrides -->
+  <style>
+    :root{--pill-bg:#fff; --dark:#111;}
+    body{font-family: 'Outfit', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif}
+
+    /* Navbar audio player pill */
+    .nav-audio-player{
+      background: var(--pill-bg);
+      border-radius: 999px;
+      padding: .25rem .5rem;
+      box-shadow: 0 6px 20px rgba(0,0,0,.15);
+      gap: .4rem;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+    .navbar-brand{max-width:100%; min-width:0; overflow:hidden}
+    .ap-seek{width: 28vw; min-width: 80px}
+    .ap-volume{width: 14vw; min-width: 60px}
+
+    /* On small phones: hide volume slider, shrink seek */
+    @media (max-width: 576px){
+      .ap-volume{display:none!important}
+      .ap-seek{width: 40vw}
+      .navbar .btn{padding: .25rem .5rem}
+    }
+
+    /* Lyric fade */
+    #pf-lyric{transition: opacity .2s ease}
+    #pf-lyric.is-fading{opacity:.25}
+
+    /* Hero video covers cleanly under content */
+    .hero-section{position:relative; min-height: 80vh}
+    .video-wrap{position:absolute; inset:0; z-index:0; overflow:hidden}
+    .custom-video{width:100%; height:100%; object-fit:cover}
+    .hero-section .container, .hero-section .row{position:relative; z-index:1}
+
+    /* About/Contact images */
+    .about-image, .artists-image{border-radius:12px}
+
+    /* Fix spacing on mobile */
+    @media (max-width: 992px){
+      .about-section .services-info{margin-top:1.25rem}
+      .site-header .container{padding-top:.25rem; padding-bottom:.25rem}
+    }
+
+    /* Footer contrast */
+    .site-footer-top{background:#000}
+  </style>
+</head>
+
+<body>
+  <!-- AUDIO + LYRICS SCRIPTS -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const audio     = document.getElementById('bg-audio');
+      const btnToggle = document.getElementById('ap-toggle');
+      const btnVol    = document.getElementById('ap-volume');
+      const rngSeek   = document.getElementById('ap-seek');
+      const rngVol    = document.getElementById('ap-volume-range');
+      const nudge     = document.getElementById('ap-nudge');
+    
+      if (!audio || !btnToggle || !btnVol || !rngSeek || !rngVol || !nudge) return;
+    
+      // --- UI helpers
+      const setPlayIcon = playing => {
+        btnToggle.innerHTML = playing ? '<i class="bi-pause-fill"></i>' : '<i class="bi-play-fill"></i>';
+        btnToggle.setAttribute('aria-label', playing ? 'Pause' : 'Play');
+      };
+      const setVolIcon = mutedOrZero => {
+        btnVol.innerHTML = mutedOrZero ? '<i class="bi-volume-mute"></i>' : '<i class="bi-volume-up"></i>';
+        btnVol.setAttribute('aria-label', mutedOrZero ? 'Unmute' : 'Mute');
+      };
+    
+      // --- Defaults
+      audio.muted = true;                  // critical: allow autoplay
+      rngVol.value = rngVol.value || 0.6;
+      audio.volume = parseFloat(rngVol.value);
+      setVolIcon(true);                    // starts muted
+    
+      // --- Try to autoplay (muted)
+      const tryAutoplay = () =>
+        audio.play()
+          .then(() => { setPlayIcon(true); /* show unmute hint until user interacts */ nudge.classList.remove('d-none'); })
+          .catch(() => { nudge.classList.remove('d-none'); setPlayIcon(false); });
+    
+      tryAutoplay();
+    
+      // --- Unlock on first user interaction anywhere
+      const unlock = () => {
+        // Unmute & play; if blocked, at least next click will do it
+        audio.muted = false;
+        setVolIcon(audio.volume === 0);
+        audio.play().then(() => {
+          setPlayIcon(true);
+          nudge.classList.add('d-none');
+          removeUnlockers();
+        }).catch(() => {
+          // Keep nudge visible; user may need to press Play
+        });
+      };
+    
+      const addUnlockers = () => {
+        ['pointerdown','touchstart','keydown','wheel'].forEach(evt =>
+          window.addEventListener(evt, unlock, { once: true, passive: true })
+        );
+      };
+      const removeUnlockers = () => {
+        ['pointerdown','touchstart','keydown','wheel'].forEach(evt =>
+          window.removeEventListener(evt, unlock, { once: true, passive: true })
+        );
+      };
+      addUnlockers();
+    
+      // Also allow the yellow pill to unmute
+      nudge.addEventListener('click', unlock);
+    
+      // --- Transport controls
+      btnToggle.addEventListener('click', () => {
+        if (audio.paused) {
+          audio.play().then(() => setPlayIcon(true));
+        } else {
+          audio.pause(); setPlayIcon(false);
+        }
+      });
+    
+      // Seek
+      rngSeek.addEventListener('input', () => { rngSeek.dragging = true; });
+      rngSeek.addEventListener('change', () => {
+        const dur = audio.duration || 0;
+        if (dur > 0) audio.currentTime = (parseInt(rngSeek.value, 10) / 100) * dur;
+        rngSeek.dragging = false;
+      });
+      const updateSeek = () => {
+        const cur = audio.currentTime || 0;
+        const dur = audio.duration || 0;
+        if (dur > 0 && !rngSeek.dragging) rngSeek.value = Math.round((cur / dur) * 100) || 0;
+      };
+      audio.addEventListener('timeupdate', updateSeek);
+      audio.addEventListener('loadedmetadata', updateSeek);
+    
+      // Volume + mute toggle
+      rngVol.addEventListener('input', () => {
+        audio.volume = parseFloat(rngVol.value);
+        audio.muted = (audio.volume === 0);
+        setVolIcon(audio.muted || audio.volume === 0);
+      });
+      btnVol.addEventListener('click', () => {
+        if (audio.muted || audio.volume === 0) {
+          audio.muted = false;
+          if (audio.volume === 0) { audio.volume = 0.6; rngVol.value = 0.6; }
+        } else {
+          audio.muted = true;
+        }
+        setVolIcon(audio.muted || audio.volume === 0);
+      });
+    
+      // Keep icon state in sync
+      audio.addEventListener('play',  () => setPlayIcon(true));
+      audio.addEventListener('pause', () => setPlayIcon(false));
+    
+      // If the tab becomes visible again, retry play (some mobile browsers pause in background)
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && audio.paused) {
+          audio.play().catch(() => {/* ignore */});
+        }
+      });
+    });
+    </script>
+    
+    
+
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const el = document.getElementById('pf-lyric');
+    if (!el) return;
+    const LINES = [
+      "'Ticking away the moments that make up a dull day.'",
+      "'Breathe, breathe in the air.'",
+      "'A new car, caviar, four-star daydream.'",
+      "'Hello? Is there anybody in there?'",
+      "'Wish you were here.'",
+      "'Shine on you crazy diamond.'",
+      "'The lunatic is on the grass.'",
+      "'I'll see you on the dark side of the moon.'",
+      "'Run like hell!'",
+      "'Two lost souls swimming in a fishbowl.'"
+    ];
+    const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+    const lines = shuffle([...LINES]); let idx=0;
+    const show = t => { el.classList.add('is-fading'); setTimeout(()=>{ el.textContent=t; el.classList.remove('is-fading'); },200); };
+    show(lines[idx]); setInterval(()=>{ idx=(idx+1)%lines.length; if(idx===0) shuffle(lines); show(lines[idx]); },10000);
+  });
+  </script>
+
+  <main>
+    <!-- Top lyric strip -->
+    <header class="site-header" style="background-color:whitesmoke;">
+      <div class="container">
+        <div class="row">
+          <div class="col-12 d-flex">
+            <p class="d-flex mb-0"><strong id="pf-lyric" class="text-dark lyric-fade" aria-live="polite"></strong></p>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- NAV -->
+    <nav class="navbar navbar-expand-lg">
+      <div class="container">
+        <!-- Brand area replaced by audio pill -->
+        <div class="navbar-brand p-0 m-0 d-flex align-items-center w-100" style="min-width:0;">
+          <a href="index.html" class="me-2 d-none d-md-inline" aria-label="Home">
+            <i class="bi-house-door" style="font-size:1.2rem;"></i>
+          </a>
+
+          <div class="nav-audio-player d-flex align-items-center flex-wrap">
+            <button id="ap-toggle" class="btn btn-light btn-sm" aria-label="Pause"><i class="bi-pause-fill"></i></button>
+            <input id="ap-seek" type="range" min="0" max="100" value="0" class="form-range ap-seek" aria-label="Seek">
+            <button id="ap-volume" class="btn btn-light btn-sm" aria-label="Mute"><i class="bi-volume-up"></i></button>
+            <input id="ap-volume-range" type="range" min="0" max="1" step="0.01" value="0.6" class="form-range ap-volume" aria-label="Volume">
+          </div>
+
+          <audio id="bg-audio"
+                src="audio/track.mp3"
+                preload="auto"
+                loop
+                playsinline
+                autoplay
+                muted>
+            </audio>
+
+            <button id="ap-nudge" class="btn btn-warning btn-sm ms-2 d-none">
+                Tap to unmute
+              </button>
+              
+        </div>
+
+        <button class="navbar-toggler ms-2" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav align-items-lg-center ms-auto">
+            <li class="nav-item"><a class="nav-link click-scroll" href="#section_1">Home</a></li>
+            <li class="nav-item"><a class="nav-link click-scroll" href="#section_2">About</a></li>
+            <li class="nav-item"><a class="nav-link click-scroll" href="#section_3">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <!-- Sound gate (shown until user unmutes) -->
+<div id="sound-gate" class="sound-gate d-none" role="dialog" aria-live="polite">
+    <button id="sg-unmute" class="btn btn-warning btn-sm me-2">
+      <i class="bi-volume-up"></i> Sound on
+    </button>
+    <span class="small">Tap to enable audio</span>
+  </div>
+  
+
+    <!-- HERO -->
+    <section class="hero-section" id="section_1">
+      <div class="section-overlay"></div>
+      <div class="container d-flex justify-content-center align-items-center">
+        <div class="row">
+          <div class="col-12 mt-auto mb-5 text-center">
+            <small>Pink Floyd Tribute</small>
+            <h1 class="text-white mb-5">The Dark Side of the Soo</h1>
+            <a class="btn custom-btn smoothscroll" href="#section_2">About Us</a>
+          </div>
+          <div class="col-12 mt-auto d-flex flex-column flex-lg-row text-center">
+            <div class="social-share mx-auto">
+              <ul class="social-icon d-flex align-items-center justify-content-center">
+                <span class="text-white me-3">Share:</span>
+                <li class="social-icon-item">
+                  <a href="https://www.facebook.com/thedarksideofthesoo" class="social-icon-link" aria-label="Facebook">
+                    <span class="bi-facebook"></span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="video-wrap" aria-hidden="true">
+        <video autoplay loop muted playsinline class="custom-video">
+          <source src="video/band.mp4" type="video/mp4" />
+          <!-- Fallback text -->
+        </video>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="about-section section-padding" id="section_2">
+      <div class="container">
+        <div class="row align-items-center g-4">
+          <div class="col-lg-6 col-12">
+            <div class="about-text-wrap">
+              <img src="images/thedarksideofthesoo.jfif" class="about-image img-fluid" alt="Prism logo">
+            </div>
+          </div>
+          <div class="col-lg-6 col-12" style="text-align: justify;">
+            <div class="services-info">
+              <h2 class="text-white mb-4">The Dark Side of the Soo</h2>
+              <p class="text-white">We are a Pink Floyd tribute band from Sault Ste. Marie, Ontario, dedicated to recreating the sound, vision, and spirit of one of the greatest rock bands of all time. Built with care, humility, and attention to detail, our show aims to deliver an experience as close as possible to a full-scale Floyd production—scaled for intimate venues.</p>
+
+              <h6 class="text-white mt-4">Lighting &amp; Visuals</h6>
+              <p class="text-white">Synchronized lighting and projected videos run in perfect time with the music, creating the unmistakable atmosphere fans expect.</p>
+
+              <h6 class="text-white mt-4">Equipment &amp; Setup</h6>
+              <p class="text-white mb-0">We provide a self-contained show including:</p>
+              <ul class="text-white" >
+                <li style="color: white !important;">PA system (ideal up to ~150; with in-house PA, up to ~200)</li>
+                <li style="color: white !important;">Backline instruments</li>
+                <li style="color: white !important;">Lighting rig (time-coded)</li>
+                <li style="color: white !important;">Video projection &amp; screen</li>
+              </ul>
+              <p class="text-white">A large-concert feel—practical and affordable for bars and small rooms.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="row my-5">
+          <div class="col-12 d-flex align-items-center justify-content-center">
+            <img src="images/wallmask.png" class="img-fluid" alt="The Wall mask concept" style="max-width:900px; padding: 6% 10%;">
+          </div>
+        </div>
+
+        <div class="row align-items-center g-4">
+          <div class="col-lg-6 col-12 order-lg-1 order-2">
+            <div class="services-info" style="text-align: right;">
+              <h2 class="text-white mb-4">What’s in a name?</h2>
+              <p class="text-white">“The Dark Side of the Soo” nods to the classic prism and to Sault Ste. Marie’s nickname—“the Soo.” We’re available across Ontario and Québec, and we love smaller rooms where we can be an arm’s length from the audience.</p>
+            </div>
+          </div>
+          <div class="col-lg-6 col-12 order-lg-2 order-1">
+            <div class="about-text-wrap">
+              <img src="images/wishuwerehere.png" class="about-image img-fluid" alt="Wish You Were Here homage">
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT / GIFS -->
+    <section class="artists-section section-padding" id="section_3">
+      <div class="container">
+        <div class="row justify-content-center text-center">
+          <div class="col-12">
+            <h2 class="mb-2">Contact</h2>
+            <p style="color:#000;">For dates, tech specs, and rates, get in touch</p>
+            <p style="color:#000;"><a href="mailto:info@thedarksideofthesoo.ca">info@thedarksideofthesoo.ca</a></p>
+            <p style="color:#000;"><a href="tel:+17052970821">+1 (705) 297 0821</a></p>
+          </div>
+        </div>
+
+        <div class="row g-4 justify-content-center mt-2">
+          <div class="col-lg-5 col-md-6 col-12">
+            <div class="artists-thumb">
+              <div class="artists-image-wrap">
+                <img src="images/echoes.gif" class="artists-image img-fluid" alt="Echoes live">
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-5 col-md-6 col-12">
+            <div class="artists-thumb">
+              <div class="artists-image-wrap">
+                <img src="images/al-and-pub.gif" class="artists-image img-fluid" alt="Live crowd moment">
+              </div>
+            </div>
+          </div>
+
+          <div class="col-lg-5 col-md-6 col-12">
+            <div class="artists-thumb">
+              <div class="artists-image-wrap">
+                <img src="images/guitarslide.gif" class="artists-image img-fluid" alt="Guitar slide moment">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="site-footer">
+    <div class="site-footer-top" style="background-color:#000 !important;">
+      <div class="container"><div class="row"></div></div>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-6 col-12 mb-4 pb-2">
+          <h5 class="site-footer-title mb-3">Links</h5>
+          <ul class="site-footer-links">
+            <li class="site-footer-link-item"><a href="#section_1" class="site-footer-link">Home</a></li>
+            <li class="site-footer-link-item"><a href="#section_2" class="site-footer-link">About</a></li>
+          </ul>
+        </div>
+
+        <div class="col-lg-3 col-md-6 col-12 mb-4 mb-lg-0">
+          <h5 class="site-footer-title mb-3">Have a question?</h5>
+          <p class="text-white d-flex mb-1"><a href="tel:+17052970821" class="site-footer-link">+1 705 297 0821</a></p>
+          <p class="text-white d-flex"><a href="mailto:info@thedarksideofthesoo.ca" class="site-footer-link">info@thedarksideofthesoo.ca</a></p>
+        </div>
+
+        <div class="col-lg-3 col-md-6 col-12 mb-4 mb-lg-0">
+          <h5 class="site-footer-title mb-3">Location</h5>
+          <p class="text-white d-flex mt-3 mb-2">Sault Ste. Marie, ON — Canada</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="site-footer-bottom">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-6 col-12 mt-4">
+            <p class="copyright-text mb-0">© 2025 The Dark Side of the Soo</p>
+            <p class="copyright-text">Distributed by: <a href="https://themewagon.com">ThemeWagon</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JS -->
+  <script src="js/jquery.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.sticky.js"></script>
+  <script src="js/click-scroll.js"></script>
+  <script src="js/custom.js"></script>
+</body>
+</html>
