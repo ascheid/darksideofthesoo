@@ -1117,3 +1117,33 @@ strong {
   gap: .4rem;
   box-shadow: 0 10px 30px rgba(0,0,0,.25);
 }
+
+/* Press strip */
+.press-section{
+  padding-top: 2rem; padding-bottom: 2rem;
+  background: #0b0b0b; /* matches your dark sections */
+}
+
+/* White pill behind the logo (mirrors your nav audio pill) */
+.press-pill{
+  background: #fff;
+  border-radius: 999px;
+  padding: .35rem .9rem;
+}
+
+/* Make the SVG scale nicely */
+.press-logo-svg{
+  display: block;
+  height: 28px; width: auto;
+}
+
+/* Slightly larger on tablets/desktop */
+@media (min-width: 768px){
+  .press-logo-svg{ height: 36px; }
+}
+
+/* Optional: hover/focus treatment */
+.press-logo:hover .press-logo-svg,
+.press-logo:focus .press-logo-svg{
+  filter: drop-shadow(0 2px 6px rgba(0,0,0,.15));
+}
